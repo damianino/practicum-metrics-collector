@@ -16,12 +16,13 @@ func NewHandler(storage memstorage.MemStorage) *Handler {
 	}
 }
 
-func (h *Handler) SetGauge(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) Handle(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		w.WriteHeader(http.StatusNotFound)
 		return
 	}
 
+	metricType := r.PathValue("metricType")
 	metricName := r.PathValue("metricName")
 	metricValue := r.PathValue("metricValue")
 
@@ -29,31 +30,22 @@ func (h *Handler) SetGauge(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "invalid params", http.StatusBadRequest)
 	}
 
-	value, err := strconv.ParseFloat(metricValue, 64)
-	if err != nil {
-		http.Error(w, "invalid gauge value", http.StatusBadRequest)
+	switch metricType {
+	case "gauge":
+		value, err := strconv.ParseFloat(metricValue, 64)
+		if err != nil {
+			http.Error(w, "invalid gauge value", http.StatusBadRequest)
+		}
+
+		h.memstorage.SetGauge(metricName, value)
+	case "counter":
+		value, err := strconv.ParseInt(metricValue, 10, 64)
+		if err != nil {
+			http.Error(w, "invalid inc value", http.StatusBadRequest)
+		}
+
+		h.memstorage.IncCounter(metricName, value)
+	default:
+		http.Error(w, "invalid metric type", http.StatusBadRequest)
 	}
-
-	h.memstorage.SetGauge(metricName, value)
-}
-
-func (h *Handler) IncCounter(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		w.WriteHeader(http.StatusNotFound)
-		return
-	}
-
-	// path should look like this: /update/<ТИП_МЕТРИКИ>/<ИМЯ_МЕТРИКИ>/<ЗНАЧЕНИЕ_МЕТРИКИ>
-	metricName := r.PathValue("metricName")
-	metricValue := r.PathValue("metricValue")
-	if metricName == "" || metricValue == "" {
-		http.Error(w, "invalid params", http.StatusBadRequest)
-	}
-
-	value, err := strconv.ParseInt(metricValue, 10, 64)
-	if err != nil {
-		http.Error(w, "invalid inc value", http.StatusBadRequest)
-	}
-
-	h.memstorage.IncCounter(metricName, value)
 }
