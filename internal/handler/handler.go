@@ -4,7 +4,6 @@ import (
 	"github.com/damianino/practicum-metrics-collector/internal/service/memstorage"
 	"net/http"
 	"strconv"
-	"strings"
 )
 
 type Handler struct {
@@ -23,22 +22,19 @@ func (h *Handler) SetGauge(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// path should look like this: /update/<ТИП_МЕТРИКИ>/<ИМЯ_МЕТРИКИ>/<ЗНАЧЕНИЕ_МЕТРИКИ>
-	segments := strings.Split(strings.Trim(r.URL.Path, "/"), "/")
-	if len(segments) != 4 {
-		http.Error(w, "invalid path", http.StatusBadRequest)
-	}
+	metricName := r.PathValue("metricName")
+	metricValue := r.PathValue("metricValue")
 
-	if r.PathValue("metricName") == "" || r.PathValue("metricValue") == "" {
+	if metricName == "" || metricValue == "" {
 		http.Error(w, "invalid params", http.StatusBadRequest)
 	}
 
-	value, err := strconv.ParseFloat(r.PathValue("metricValue"), 64)
+	value, err := strconv.ParseFloat(metricValue, 64)
 	if err != nil {
 		http.Error(w, "invalid gauge value", http.StatusBadRequest)
 	}
 
-	h.memstorage.SetGauge(segments[2], value)
+	h.memstorage.SetGauge(metricName, value)
 }
 
 func (h *Handler) IncCounter(w http.ResponseWriter, r *http.Request) {
@@ -48,19 +44,16 @@ func (h *Handler) IncCounter(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// path should look like this: /update/<ТИП_МЕТРИКИ>/<ИМЯ_МЕТРИКИ>/<ЗНАЧЕНИЕ_МЕТРИКИ>
-	segments := strings.Split(strings.Trim(r.URL.Path, "/"), "/")
-	if len(segments) != 4 {
-		http.Error(w, "invalid path", http.StatusBadRequest)
-	}
-
-	if r.PathValue("metricName") == "" || r.PathValue("metricValue") == "" {
+	metricName := r.PathValue("metricName")
+	metricValue := r.PathValue("metricValue")
+	if metricName == "" || metricValue == "" {
 		http.Error(w, "invalid params", http.StatusBadRequest)
 	}
 
-	value, err := strconv.ParseInt(r.PathValue("metricValue"), 10, 64)
+	value, err := strconv.ParseInt(metricValue, 10, 64)
 	if err != nil {
 		http.Error(w, "invalid inc value", http.StatusBadRequest)
 	}
 
-	h.memstorage.IncCounter(segments[2], value)
+	h.memstorage.IncCounter(metricName, value)
 }
